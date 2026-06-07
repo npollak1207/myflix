@@ -1,0 +1,25 @@
+# Local dev environment — Jellyfin portable binary, cache, config, media,
+# and session.json (contains an access token). NEVER commit this.
+.dev/
+
+# Runtime data & secrets
+data/
+.env
+*.local
+
+# Frontend build artifacts & deps
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+
+# IDE
+.idea/
+
+# stray root lockfile (no root package.json)
+/package-lock.json

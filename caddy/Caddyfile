@@ -1,0 +1,35 @@
+# MyFlix reverse proxy.
+#
+# Frontend (static SPA) is served at /, Jellyfin lives under /jellyfin.
+# IMPORTANT: set Jellyfin's base URL to "/jellyfin" in the dashboard
+#   Dashboard -> Networking -> Base URL = /jellyfin
+# so the prefix is preserved end-to-end (we do NOT strip it here).
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	# --- Jellyfin: REST API, HLS streams, images, websockets ---
+	@jellyfin path /jellyfin/*
+	handle @jellyfin {
+		reverse_proxy jellyfin:8096 {
+			# Pass real client info through to Jellyfin
+			header_up X-Real-IP {remote_host}
+		}
+	}
+
+	# --- Custom React frontend (SPA) ---
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# --- Tailscale-only / no public domain? ---
+# Replace the block above with your tailnet hostname and use Caddy's
+# internal CA (self-signed, trusted on your tailnet devices):
+#
+# myhost.tailXXXX.ts.net {
+#     tls internal
+#     ... same handle blocks ...
+# }

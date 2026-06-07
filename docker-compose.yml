@@ -1,0 +1,51 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    # Hardware transcoding via Intel Quick Sync. The render node must be
+    # passed through and the container user must be in the right group.
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      # Set these to the host GIDs of the `render` and `video` groups:
+      #   getent group render video
+      - "989" # render  (adjust to your host)
+      - "44"  # video   (adjust to your host)
+    volumes:
+      - ./data/jellyfin/config:/config
+      - ./data/jellyfin/cache:/cache
+      - ${MEDIA_PATH:?set MEDIA_PATH in .env}:/media:ro
+    environment:
+      - JELLYFIN_PublishedServerUrl=${PUBLIC_URL}
+      - TZ=${TZ:-UTC}
+    # No public ports: Jellyfin is only reachable through Caddy on the
+    # internal network (and over Tailscale). Uncomment for direct LAN access.
+    # ports:
+    #   - "8096:8096"
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frontend/dist:/srv/frontend:ro
+      - ./data/caddy/data:/data
+      - ./data/caddy/config:/config
+    environment:
+      - DOMAIN=${DOMAIN}
+    depends_on:
+      - jellyfin
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
