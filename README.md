@@ -171,12 +171,15 @@ there's nothing else to configure.
 ### 3. Frontend — build & ship
 
 ```bash
-cd frontend
-npm run build                     # outputs frontend/dist
+docker compose up -d --build      # builds the SPA and serves it via Caddy
 ```
 
-`docker-compose.yml` mounts `frontend/dist` into Caddy at `/srv/frontend`, so after a build just
-reload Caddy (`docker compose restart caddy`). The SPA is served at `/` with history‑API fallback.
+The root `Dockerfile` is a multi‑stage build that compiles the SPA and bakes it into the Caddy
+image, so `docker compose up --build` is fully self‑contained — no manual host build required. The
+`Caddyfile` is still bind‑mounted, so reverse‑proxy/security‑header tweaks don't need a rebuild
+(`docker compose restart caddy`). The SPA is served at `/` with history‑API fallback.
+
+> Prefer building on the host? `cd frontend && npm run build` still outputs `frontend/dist`.
 
 ## Configuration
 
@@ -228,7 +231,11 @@ From `frontend/`:
 | `npm run test`     | Vitest                                |
 
 On Windows, `dev.ps1` boots the local Jellyfin instance **and** the frontend together
-(`.\dev.ps1`, `.\dev.ps1 -Stop` to halt).
+(`.\dev.ps1`, `.\dev.ps1 -Stop` to halt). On **macOS / Linux**, `./dev.sh` installs deps (first run)
+and starts the frontend dev server against the Jellyfin you point at in `frontend/.env.local`
+(`./dev.sh --stop` to halt).
+
+CI (`.github/workflows/ci.yml`) runs **lint → typecheck → test → build** on every push and PR.
 
 ## Implementation notes & gotchas
 
@@ -245,7 +252,11 @@ On Windows, `dev.ps1` boots the local Jellyfin instance **and** the frontend tog
 - Deploy to the Linux server with Docker + Caddy + **Tailscale** and validate Quick Sync
 - **PWA** (installable, offline shell, app icon)
 - Custom Vidstack player skin
-- Library virtualization at large scale; more tests
+- Enable the Content‑Security‑Policy (drafted in `caddy/Caddyfile`) after verifying playback
+
+**Recently done:** window‑virtualized library grid, player error/retry UI + beacon‑accurate resume
+reporting, security headers (Caddy + Vercel) with token redaction, multi‑stage Docker build, CI, and
+a macOS/Linux dev launcher.
 
 ## Disclaimer
 

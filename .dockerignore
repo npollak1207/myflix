@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+.dev
+data
+.git
+**/.env
+**/.env.local
+*.md

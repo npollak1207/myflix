@@ -27,7 +27,11 @@ services:
       - internal
 
   caddy:
-    image: caddy:2
+    # Builds the SPA and bakes it into the Caddy image (see ./Dockerfile), so
+    # `docker compose up --build` is self-contained — no manual host build needed.
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -35,8 +39,8 @@ services:
       - "443:443"
       - "443:443/udp" # HTTP/3
     volumes:
+      # Caddyfile stays mounted so config edits don't require an image rebuild.
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./frontend/dist:/srv/frontend:ro
       - ./data/caddy/data:/data
       - ./data/caddy/config:/config
     environment:

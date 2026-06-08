@@ -328,3 +328,22 @@ export async function reportStopped(
     }),
   })
 }
+
+// Fire-and-forget stop report that survives the page being torn down (tab close,
+// navigation). A normal fetch is often cancelled during `pagehide`; sendBeacon is
+// queued by the browser and delivered regardless. Auth rides as `api_key` because
+// beacons can't set headers. Returns false if the beacon couldn't be queued
+// (caller should fall back to reportStopped).
+export function reportStoppedBeacon(
+  itemId: string,
+  playSessionId: string,
+  positionTicks: number,
+): boolean {
+  if (typeof navigator.sendBeacon !== 'function') return false
+  const url = `${API_BASE}/Sessions/Playing/Stopped?api_key=${encodeURIComponent(getToken() ?? '')}`
+  const body = new Blob(
+    [JSON.stringify({ ItemId: itemId, PlaySessionId: playSessionId, PositionTicks: positionTicks })],
+    { type: 'application/json' },
+  )
+  return navigator.sendBeacon(url, body)
+}

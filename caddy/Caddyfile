@@ -8,6 +8,35 @@
 {$DOMAIN} {
 	encode zstd gzip
 
+	# --- Security headers ---
+	# HSTS (1y, preload), clickjacking + MIME-sniff protection, and a tight
+	# referrer policy so the access-token query param in media/subtitle URLs is
+	# never leaked via the Referer header to third parties.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "no-referrer"
+		# Lock down powerful APIs the app doesn't use.
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Caddy adds its own Server header; drop the version for less fingerprinting.
+		-Server
+
+		# Content-Security-Policy — left commented because it must be verified against
+		# live playback (HLS uses blob: URLs, trailers embed YouTube). Enable after
+		# confirming trailers + HLS still play, then tighten:
+		# Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'"
+	}
+
+	# Keep access tokens out of the access log: redact the api_key query param.
+	log {
+		format filter {
+			request>uri query {
+				replace api_key REDACTED
+			}
+		}
+	}
+
 	# --- Jellyfin: REST API, HLS streams, images, websockets ---
 	@jellyfin path /jellyfin/*
 	handle @jellyfin {
